@@ -1,9 +1,3 @@
-"""
-Flask REST API server for Library Desk Agent.
-
-This module provides HTTP endpoints for the chat interface,
-session management, and order viewing.
-"""
 import os
 from typing import Dict, Any, Tuple
 from flask import Flask, request, jsonify
@@ -32,47 +26,15 @@ CORS(app)
 
 
 def _build_error_response(error_message: str, status_code: int = 500) -> tuple[Dict[str, str], int]:
-    """
-    Build a standardized error response.
-    
-    Args:
-        error_message: Error message string.
-        status_code: HTTP status code.
-        
-    Returns:
-        Tuple of (JSON response, status code).
-    """
     return jsonify({'error': error_message}), status_code
 
 
 def _build_success_response(data: Dict[str, Any], status_code: int = 200) -> Tuple[Dict[str, Any], int]:
-    """
-    Build a standardized success response.
-    
-    Args:
-        data: Response data dictionary.
-        status_code: HTTP status code.
-        
-    Returns:
-        Tuple of (JSON response, status code).
-    """
     return jsonify(data), status_code
 
 
 @app.route('/api/chat', methods=['POST'])
 def handle_chat() -> tuple[Dict[str, Any], int]:
-    """
-    Handle chat messages from the frontend.
-    
-    Request body:
-        {
-            "message": str,
-            "session_id": str (optional, defaults to "default")
-        }
-    
-    Returns:
-        JSON response with agent reply and session_id.
-    """
     try:
         request_data = request.json or {}
         message = request_data.get('message', '').strip()
@@ -81,20 +43,16 @@ def handle_chat() -> tuple[Dict[str, Any], int]:
         if not message:
             return _build_error_response('Message is required', 400)
         
-        # Load conversation history for context
         previous_messages = get_session_messages(session_id)
         conversation_history = [
             {"role": msg['role'], "content": msg['content']}
             for msg in previous_messages[-CONVERSATION_HISTORY_LIMIT:]
         ]
         
-        # Save user message
         save_message(session_id, 'user', message)
         
-        # Get agent response
         agent_response = library_agent(message, session_id, conversation_history)
         
-        # Save assistant response
         save_message(session_id, 'assistant', agent_response)
         
         return _build_success_response({
@@ -108,12 +66,6 @@ def handle_chat() -> tuple[Dict[str, Any], int]:
 
 @app.route('/api/sessions', methods=['GET'])
 def handle_get_sessions() -> Tuple[Dict[str, Any], int]:
-    """
-    Get list of all chat sessions.
-    
-    Returns:
-        JSON response with list of session IDs.
-    """
     try:
         sessions = get_sessions()
         return _build_success_response({'sessions': sessions})
@@ -123,15 +75,6 @@ def handle_get_sessions() -> Tuple[Dict[str, Any], int]:
 
 @app.route('/api/sessions/<session_id>/messages', methods=['GET'])
 def handle_get_messages(session_id: str) -> Tuple[Dict[str, Any], int]:
-    """
-    Get all messages for a specific session.
-    
-    Args:
-        session_id: The session identifier.
-        
-    Returns:
-        JSON response with list of messages.
-    """
     try:
         messages = get_session_messages(session_id)
         return _build_success_response({'messages': messages})
@@ -141,23 +84,11 @@ def handle_get_messages(session_id: str) -> Tuple[Dict[str, Any], int]:
 
 @app.route('/api/health', methods=['GET'])
 def handle_health_check() -> Tuple[Dict[str, str], int]:
-    """
-    Health check endpoint.
-    
-    Returns:
-        JSON response indicating server status.
-    """
     return _build_success_response({'status': 'ok'})
 
 
 @app.route('/api/orders', methods=['GET'])
 def handle_get_orders() -> Tuple[Dict[str, Any], int]:
-    """
-    Get all orders with customer and item details.
-    
-    Returns:
-        JSON response with list of orders.
-    """
     try:
         orders_query = """
             SELECT 
@@ -199,15 +130,6 @@ def handle_get_orders() -> Tuple[Dict[str, Any], int]:
 
 @app.route('/api/orders/<int:order_id>', methods=['GET'])
 def handle_get_order_details(order_id: int) -> Tuple[Dict[str, Any], int]:
-    """
-    Get detailed information about a specific order.
-    
-    Args:
-        order_id: The order identifier.
-        
-    Returns:
-        JSON response with order details including items and total.
-    """
     try:
         order_header_query = """
             SELECT o.id, o.customer_id, o.created_at, 
@@ -226,14 +148,12 @@ def handle_get_order_details(order_id: int) -> Tuple[Dict[str, Any], int]:
         """
         
         with closing(get_connection()) as connection:
-            # Get order header
             cursor = connection.execute(order_header_query, (order_id,))
             order = cursor.fetchone()
             
             if not order:
                 return _build_error_response('Order not found', 404)
             
-            # Get order items
             cursor = connection.execute(order_items_query, (order_id,))
             items = [dict(row) for row in cursor.fetchall()]
             

@@ -1,7 +1,6 @@
 const API_BASE = 'http://localhost:5000/api';
 let currentSessionId = 'default';
 
-// Theme Management
 function initTheme() {
     const savedTheme = localStorage.getItem('theme') || 'light';
     document.documentElement.setAttribute('data-theme', savedTheme);
@@ -21,7 +20,6 @@ function updateThemeIcon(theme) {
     icon.textContent = theme === 'dark' ? '☀️' : '🌙';
 }
 
-// Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
     initTheme();
     checkServerHealth();
@@ -29,7 +27,6 @@ document.addEventListener('DOMContentLoaded', () => {
     loadCurrentSession();
 });
 
-// Check if server is running
 async function checkServerHealth() {
     try {
         const response = await fetch(`${API_BASE}/health`);
@@ -63,7 +60,6 @@ async function checkServerHealth() {
     }
 }
 
-// Load list of sessions
 async function loadSessions() {
     try {
         const response = await fetch(`${API_BASE}/sessions`);
@@ -96,7 +92,6 @@ async function loadSessions() {
     }
 }
 
-// Create a new session
 function createNewSession() {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     currentSessionId = `session-${timestamp}`;
@@ -105,7 +100,6 @@ function createNewSession() {
     loadSessions();
 }
 
-// Load a session
 async function loadSession() {
     const sessionId = document.getElementById('sessionSelect').value;
     if (sessionId === 'new') {
@@ -115,12 +109,10 @@ async function loadSession() {
     switchSession(sessionId);
 }
 
-// Switch to a different session
 async function switchSession(sessionId) {
     currentSessionId = sessionId;
     document.getElementById('sessionSelect').value = sessionId;
     
-    // Update active session in list
     document.querySelectorAll('.session-item').forEach(item => {
         item.classList.remove('active');
         if (item.textContent === sessionId) {
@@ -131,12 +123,10 @@ async function switchSession(sessionId) {
     await loadCurrentSession();
 }
 
-// Load messages for current session
 async function loadCurrentSession() {
     try {
         const response = await fetch(`${API_BASE}/sessions/${currentSessionId}/messages`);
         if (!response.ok) {
-            // If session doesn't exist yet, that's okay
             if (response.status === 404) {
                 clearMessages();
                 return;
@@ -154,11 +144,9 @@ async function loadCurrentSession() {
         }
     } catch (error) {
         console.error('Error loading session:', error);
-        // Don't show error for new sessions
     }
 }
 
-// Send a message
 async function sendMessage() {
     const input = document.getElementById('messageInput');
     const message = input.value.trim();
@@ -169,7 +157,6 @@ async function sendMessage() {
     sendButton.disabled = true;
     sendButton.innerHTML = '<div class="loading"></div>';
     
-    // Add user message to UI
     addMessage('user', message);
     input.value = '';
     
@@ -197,7 +184,6 @@ async function sendMessage() {
             addMessage('assistant', data.response, new Date().toISOString());
         }
         
-        // Reload sessions list in case a new session was created
         loadSessions();
         
     } catch (error) {
@@ -213,7 +199,6 @@ async function sendMessage() {
     }
 }
 
-// Add a message to the UI
 function addMessage(role, content, timestamp) {
     const messagesDiv = document.getElementById('messages');
     const messageDiv = document.createElement('div');
@@ -234,16 +219,13 @@ function addMessage(role, content, timestamp) {
     messageDiv.appendChild(time);
     messagesDiv.appendChild(messageDiv);
     
-    // Scroll to bottom
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
-// Clear messages
 function clearMessages() {
     document.getElementById('messages').innerHTML = '';
 }
 
-// Handle Enter key press
 function handleKeyPress(event) {
     if (event.key === 'Enter') {
         sendMessage();
